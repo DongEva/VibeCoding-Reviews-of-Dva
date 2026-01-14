@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>复古像素贪吃蛇 - 水果版</title>
+    <!-- 引入像素字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* --- 颜色设置 --- */
+            /* 游戏机外壳：恢复为原来的灰白色 */
+            --console-bg: #dcdcdc;
+            --console-dark: #aaa;
+            --dpad-color: #2b2b2b;
+            --console-red: #e60012;
+            --screen-bg: #8b9bb4;
+            --screen-on: #9bbc0f;
+            --pixel-color: #0f380f;
+            
+            /* --- 信息面板颜色 --- */
+            --info-panel-bg: #e8e4d9;
+            --info-lcd-bg: #cfd8dc;
+            
+            --shadow-light: rgba(255, 255, 255, 0.6);
+            --shadow-dark: rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            /* --- 背景改为米白色 --- */
+            background-color: #f4f0e6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+        }
+
+        /* 游戏机外壳 */
+        .console-case {
+            width: 100%;
+            max-width: 650px;
+            background-color: var(--console-bg);
+            border-radius: 20px 20px 40px 40px;
+            padding: 20px;
+            box-shadow: 
+                inset 5px 5px 15px var(--shadow-light),
+                inset -5px -5px 15px var(--shadow-dark),
+                10px 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .case-top-line {
+            width: 60%;
+            height: 10px;
+            background: var(--console-dark);
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* --- 顶部区域：包含屏幕和侧边栏 --- */
+        .top-area {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        /* 屏幕边框区域 */
+        .screen-bezel {
+            background-color: #555;
+            padding: 20px;
+            border-radius: 10px 10px 30px 10px;
+            box-shadow: 
+                inset 2px 2px 5px rgba(0,0,0,0.5),
+                5px 5px 10px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .screen-container {
+            position: relative;
+            width: 320px;
+            height: 240px;
+            background-color: var(--screen-bg);
+            border: 4px solid #444;
+            box-shadow: inset 5px 5px 20px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+
+        /* --- 右侧信息面板 --- */
+        .info-panel {
+            width: 180px;
+            height: 100%;
+            background-color: var(--info-panel-bg);
+            border-radius: 10px;
+            border: 2px solid #aaa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .panel-title {
+            font-size: 10px;
+            color: #555;
+            margin-bottom: 10px;
+            text-align: center;
+            border-bottom: 1px dashed #999;
+            width: 100%;
+            padding-bottom: 5px;
+            font-family: sans-serif;
+            font-weight: bold;
+        }
+
+        .fruit-display-box {
+            width: 80px;
+            height: 80px;
+            background-color: var(--info-lcd-bg);
+            border: 2px solid #888;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            margin-bottom: 15px;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+        
+        .fruit-display-box.pop {
+            transform: scale(1.2);
+            border-color: var(--console-red);
+        }
+
+        .text-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .fruit-label {
+            font-size: 10px;
+            color: #666;
+            font-family: sans-serif;
+            text-transform: uppercase;
+        }
+
+        .fruit-name {
+            font-size: 12px;
+            color: #333;
+            font-weight: bold;
+            font-family: sans-serif;
+            text-align: left;
+            background: #fff;
+            padding: 4px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+
+        /* --- 屏幕内部内容 --- */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .game-ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--pixel-color);
+            text-align: center;
+            z-index: 20;
+            background: rgba(155, 188, 15, 0.85);
+            transition: opacity 0.3s;
+        }
+        .game-ui.hidden { opacity: 0; pointer-events: none; }
+        .title { font-size: 1.2rem; margin-bottom: 20px; text-transform: uppercase; text-shadow: 2px 2px #fff; }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        /* --- 控制区域 --- */
+        .controls-area {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        /* 十字键 */
+        .d-pad { width: 120px; height: 120px; position: relative; }
+        .d-pad-part {
+            position: absolute;
+            background-color: var(--dpad-color);
+            cursor: pointer;
+            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.2), inset -2px -2px 5px rgba(0,0,0,0.5), 2px 2px 5px rgba(0,0,0,0.3);
+            transition: background-color 0.1s, box-shadow 0.1s;
+        }
+        .d-pad-part:active, .d-pad-part.active {
+            background-color: #1a1a1a;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.7);
+        }
+        .d-up { top: 0; left: 33.33%; width: 33.33%; height: 33.33%; border-radius: 5px 5px 0 0; z-index: 1; }
+        .d-down { bottom: 0; left: 33.33%; width: 33.33%; height: 33.33%; border-radius: 0 0 5px 5px; z-index: 1; }
+        .d-left { top: 33.33%; left: 0; width: 33.33%; height: 33.33%; border-radius: 5px 0 0 5px; z-index: 2; }
+        .d-right { top: 33.33%; right: 0; width: 33.33%; height: 33.33%; border-radius: 0 5px 5px 0; z-index: 2; }
+        .d-center {
+            position: absolute;
+            width: 33.33%;
+            height: 33.33%;
+            top: 33.33%;
+            left: 33.33%;
+            background: radial-gradient(circle, #444 20%, #222 100%);
+            z-index: 5;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+            border-radius: 50%;
+        }
+        .d-pad-part::after {
+            content: '';
+            position: absolute;
+            background: rgba(0,0,0,0.5);
+        }
+        .d-up::after { top: 5px; left: 35%; width: 30%; height: 3px; box-shadow: 0 4px 0 rgba(0,0,0,0.5); }
+        .d-down::after { bottom: 5px; left: 35%; width: 30%; height: 3px; box-shadow: 0 -4px 0 rgba(0,0,0,0.5); }
+        .d-left::after { left: 5px; top: 35%; height: 30%; width: 3px; box-shadow: 4px 0 0 rgba(0,0,0,0.5); }
+        .d-right::after { right: 5px; top: 35%; height: 30%; width: 3px; box-shadow: -4px 0 0 rgba(0,0,0,0.5); }
+
+        /* START 按钮 */
+        .action-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 120px;
+            width: 120px;
+        }
+        .btn-round {
+            width: 60px;
+            height: 60px;
+            background-color: var(--console-red);
+            border-radius: 50%;
+            box-shadow: inset 3px 3px 8px var(--shadow-light), inset -3px -3px 8px var(--shadow-dark), 3px 3px 8px rgba(0,0,0,0.4);
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.1s;
+        }
+        .btn-round:active, .btn-round.active {
+            box-shadow: inset 3px 3px 8px rgba(0,0,0,0.5);
+            transform: scale(0.95);
+            background-color: #c40010;
+        }
+        .btn-label {
+            margin-top: 15px;
+            color: #333;
+            font-family: sans-serif;
+            font-weight: 900;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+        }
+
+        /* 装饰 LOGO - 使用像素字体 */
+        .brand-logo {
+            position: absolute;
+            top: 25px;
+            left: 30px;
+            /* --- 应用像素字体 --- */
+            font-family: 'Press Start 2P', cursive;
+            font-weight: normal;
+            font-style: normal;
+            color: rgba(0,0,0,0.2);
+            font-size: 0.8rem; /* 像素字体通常比较大，调小一点 */
+            transform: none;
+            pointer-events: none;
+            white-space: nowrap;
+            line-height: 1.5;
+        }
+
+        .speaker {
+            position: absolute;
+            bottom: 20px;
+            right: 30px;
+            display: grid;
+            grid-template-columns: repeat(6, 4px);
+            gap: 4px;
+        }
+        .speaker-hole {
+            width: 4px;
+            height: 4px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 50%;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 600px) {
+            .top-area { flex-direction: column; gap: 10px; }
+            .screen-container { width: 100%; max-width: 320px; height: auto; aspect-ratio: 4/3; }
+            .info-panel { width: 100%; height: 100px; flex-direction: row; justify-content: space-around; }
+            .fruit-display-box { width: 60px; height: 60px; font-size: 30px; margin-bottom: 0; }
+            .text-container { width: 60%; }
+            .controls-area { padding: 0 10px; }
+            .d-pad { width: 100px; height: 100px; }
+            .btn-round { width: 50px; height: 50px; }
+            .title { font-size: 1rem; }
+            .brand-logo { font-size: 0.6rem; left: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="console-case">
+        <div class="case-top-line"></div>
+        <div class="brand-logo">DongEvan Trial</div>
+        
+        <!-- 顶部区域：屏幕 + 侧边栏 -->
+        <div class="top-area">
+            <div class="screen-bezel">
+                <div class="screen-container">
+                    <canvas id="gameCanvas" width="320" height="240"></canvas>
+                    <div class="scanlines"></div>
+                    
+                    <div id="startScreen" class="game-ui">
+                        <div class="title">SNAKE GAME</div>
+                        <div class="blink">PRESS START</div>
+                    </div>
+
+                    <div id="gameOverScreen" class="game-ui hidden">
+                        <div class="title" style="color: #9b0000;">GAME OVER</div>
+                        <div>SCORE: <span id="finalScore">0</span></div>
+                        <div class="blink" style="margin-top: 20px;">TRY AGAIN</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧信息栏 -->
+            <div class="info-panel">
+                <div class="panel-title">FRUIT INFO</div>
+                <div class="fruit-display-box" id="fruit-icon-box">?</div>
+                <div class="text-container">
+                    <div>
+                        <div class="fruit-label">CN 中文</div>
+                        <div class="fruit-name" id="fruit-cn">--</div>
+                    </div>
+                    <div>
+                        <div class="fruit-label">ES Español</div>
+                        <div class="fruit-name" id="fruit-es">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部控制区 -->
+        <div class="controls-area">
+            <div class="d-pad">
+                <div class="d-center"></div>
+                <div class="d-pad-part d-up" id="d-up"></div>
+                <div class="d-pad-part d-down" id="d-down"></div>
+                <div class="d-pad-part d-left" id="d-left"></div>
+                <div class="d-pad-part d-right" id="d-right"></div>
+            </div>
+
+            <div class="action-area">
+                <div class="btn-round" id="btn-start"></div>
+                <div class="btn-label">START</div>
+            </div>
+        </div>
+
+        <div class="speaker">
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 水果数据库 ---
+        const FRUITS = [
+            { icon: '🍎', cn: '苹果', es: 'Manzana' },
+            { icon: '🍌', cn: '香蕉', es: 'Plátano' },
+            { icon: '🍇', cn: '葡萄', es: 'Uva' },
+            { icon: '🍉', cn: '西瓜', es: 'Sandía' },
+            { icon: '🍓', cn: '草莓', es: 'Fresa' },
+            { icon: '🍒', cn: '樱桃', es: 'Cereza' },
+            { icon: '🍑', cn: '桃子', es: 'Melocotón' },
+            { icon: '🍊', cn: '橘子', es: 'Naranja' },
+            { icon: '🍍', cn: '菠萝', es: 'Piña' },
+            { icon: '🥝', cn: '猕猴桃', es: 'Kiwi' }
+        ];
+
+        // --- 游戏配置 ---
+        const CANVAS_WIDTH = 320;
+        const CANVAS_HEIGHT = 240;
+        const GRID_SIZE = 16; 
+        const TILE_COUNT_X = CANVAS_WIDTH / GRID_SIZE;
+        const TILE_COUNT_Y = CANVAS_HEIGHT / GRID_SIZE;
+        const FPS = 10; 
+
+        // --- DOM 元素 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreEl = document.getElementById('finalScore');
+        const btnStart = document.getElementById('btn-start');
+        
+        // 右侧面板元素
+        const fruitIconBox = document.getElementById('fruit-icon-box');
+        const fruitCnEl = document.getElementById('fruit-cn');
+        const fruitEsEl = document.getElementById('fruit-es');
+
+        // 十字键按钮
+        const dUp = document.getElementById('d-up');
+        const dDown = document.getElementById('d-down');
+        const dLeft = document.getElementById('d-left');
+        const dRight = document.getElementById('d-right');
+
+        // --- 音频 ---
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            if (type === 'move') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            } else if (type === 'eat') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'die') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            }
+        }
+
+        // --- 游戏状态 ---
+        let snake = [];
+        let food = { x: 0, y: 0, type: null }; 
+        let velocity = { x: 0, y: 0 };
+        let nextVelocity = { x: 0, y: 0 }; 
+        let score = 0;
+        let gameInterval = null;
+        let isGameRunning = false;
+
+        // --- 绘图函数 ---
+        function drawPixelRect(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * GRID_SIZE + 1, y * GRID_SIZE + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+        }
+
+        function drawSnake() {
+            snake.forEach((segment, index) => {
+                const color = index === 0 ? '#0f380f' : '#306230';
+                drawPixelRect(segment.x, segment.y, color);
+            });
+        }
+
+        function drawFood() {
+            ctx.font = '14px "Segoe UI Emoji", Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const centerX = food.x * GRID_SIZE + GRID_SIZE / 2;
+            const centerY = food.y * GRID_SIZE + GRID_SIZE / 2 + 1; 
+            ctx.fillText(food.type.icon, centerX, centerY);
+        }
+
+        function drawScore() {
+            ctx.fillStyle = '#0f380f';
+            ctx.font = '10px "Press Start 2P"';
+            ctx.fillText(`SCORE:${score}`, 5, CANVAS_HEIGHT - 5);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#9bbc0f';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            drawFood();
+            drawSnake();
+            drawScore();
+        }
+
+        function spawnFood() {
+            let valid = false;
+            while (!valid) {
+                const x = Math.floor(Math.random() * TILE_COUNT_X);
+                const y = Math.floor(Math.random() * TILE_COUNT_Y);
+                const onSnake = snake.some(segment => segment.x === x && segment.y === y);
+                if (!onSnake) {
+                    food.x = x;
+                    food.y = y;
+                    food.type = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+                    valid = true;
+                }
+            }
+        }
+
+        function updateInfoPanel(fruitData) {
+            fruitIconBox.innerText = fruitData.icon;
+            fruitCnEl.innerText = fruitData.cn;
+            fruitEsEl.innerText = fruitData.es;
+
+            fruitIconBox.classList.remove('pop');
+            void fruitIconBox.offsetWidth; 
+            fruitIconBox.classList.add('pop');
+        }
+
+        function update() {
+            if (!isGameRunning) return;
+
+            velocity = { ...nextVelocity };
+            const head = { x: snake[0].x + velocity.x, y: snake[0].y + velocity.y };
+
+            if (head.x < 0 || head.x >= TILE_COUNT_X || head.y < 0 || head.y >= TILE_COUNT_Y) {
+                gameOver();
+                return;
+            }
+            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                gameOver();
+                return;
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                playSound('eat');
+                updateInfoPanel(food.type);
+                spawnFood();
+            } else {
+                snake.pop();
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        function startGame() {
+            initAudio();
+            snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+            velocity = { x: 1, y: 0 };
+            nextVelocity = { x: 1, y: 0 };
+            score = 0;
+            isGameRunning = true;
+            
+            fruitIconBox.innerText = "?";
+            fruitCnEl.innerText = "--";
+            fruitEsEl.innerText = "--";
+
+            spawnFood();
+            
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, 1000 / FPS);
+            playSound('move');
+        }
+
+        function gameOver() {
+            isGameRunning = false;
+            clearInterval(gameInterval);
+            playSound('die');
+            finalScoreEl.innerText = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function handleInput(action) {
+            if (!isGameRunning) return;
+            switch(action) {
+                case 'UP': if (velocity.y === 0) nextVelocity = { x: 0, y: -1 }; break;
+                case 'DOWN': if (velocity.y === 0) nextVelocity = { x: 0, y: 1 }; break;
+                case 'LEFT': if (velocity.x === 0) nextVelocity = { x: -1, y: 0 }; break;
+                case 'RIGHT': if (velocity.x === 0) nextVelocity = { x: 1, y: 0 }; break;
+            }
+        }
+
+        // 键盘监听 (保留功能)
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+            if (!isGameRunning && (e.key === 'Enter' || e.key === ' ')) { startGame(); return; }
+            switch(e.key) {
+                case 'ArrowUp': handleInput('UP'); dUp.classList.add('active'); break;
+                case 'ArrowDown': handleInput('DOWN'); dDown.classList.add('active'); break;
+                case 'ArrowLeft': handleInput('LEFT'); dLeft.classList.add('active'); break;
+                case 'ArrowRight': handleInput('RIGHT'); dRight.classList.add('active'); break;
+            }
+        });
+
+        document.addEventListener('keyup', () => {
+            dUp.classList.remove('active');
+            dDown.classList.remove('active');
+            dLeft.classList.remove('active');
+            dRight.classList.remove('active');
+        });
+
+        function bindBtn(btn, action) {
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                handleInput(action);
+                btn.classList.add('active');
+            });
+            btn.addEventListener('pointerup', () => btn.classList.remove('active'));
+            btn.addEventListener('pointerleave', () => btn.classList.remove('active'));
+        }
+
+        bindBtn(dUp, 'UP');
+        bindBtn(dDown, 'DOWN');
+        bindBtn(dLeft, 'LEFT');
+        bindBtn(dRight, 'RIGHT');
+
+        btnStart.addEventListener('click', () => { if (!isGameRunning) startGame(); });
+        btnStart.addEventListener('pointerdown', () => btnStart.classList.add('active'));
+        btnStart.addEventListener('pointerup', () => btnStart.classList.remove('active'));
+        btnStart.addEventListener('pointerleave', () => btnStart.classList.remove('active'));
+
+        // 初始画面
+        ctx.fillStyle = '#9bbc0f';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    </script>
+</body>
+</html>
