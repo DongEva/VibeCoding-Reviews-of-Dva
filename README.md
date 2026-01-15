@@ -1,7 +1,7 @@
 # VibeCoding-Reviews-of-Dva
 在这个仓库里主要储存关于Vibecodingc的知识感想，以及在这里制作的一些相关的coding文件。
 
-2026.1.14
+##2026.1.14##
 
 一、AI工具使用体验
 
@@ -19,11 +19,11 @@
 
 在第一天写贪吃蛇小游戏的时候，我发现给他提一些更明确的需求。比如说红白游戏机这些，他其实对这些关键词的理解会更好。给他说精美这些词，其实是没有明确的效果的。
 然后如果要新增弹窗这些东西，一定要明确弹窗的位置。
-2026.1.15
+##2026.1.15##
 
 一、金句分享
 
-"Live in the future, then build what's missing." （活在未来，然后构建缺失的东西。） —— Paul Graham，Y Combinator 联合创始人
+*"Live in the future, then build what's missing." （活在未来，然后构建缺失的东西。） —— Paul Graham，Y Combinator 联合创始人*
 
 二、个人感悟
 
